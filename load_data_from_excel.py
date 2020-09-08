@@ -60,12 +60,14 @@ def load_data(file):
 
     # Data preprocessing
     scaler = StandardScaler().fit(train_X)
-    train_X -= scaler.mean_
-    val_X -= scaler.mean_
+    # train_X -= scaler.mean_
+    # val_X -= scaler.mean_
+    train_X = scaler.transform(train_X)
+    val_X = scaler.transform(val_X)
 
     return train_X, val_X, train_y, val_y
 
 
 if __name__ == '__main__':
     train_X, val_X, train_y, val_y = load_data('uniform_synthetic_data_Butane_N=5000_D=12 - T2.xlsx')
-    np.savez('BLEVE_simulated_open',train_X, val_X, train_y, val_y)
+    np.savez('BLEVE_simulated_open', train_X=train_X, val_X=val_X, train_y=train_y, val_y=val_y)

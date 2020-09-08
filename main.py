@@ -5,7 +5,6 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import scipy.io as sio
 import math
-from load_data_from_excel import load_data
 from torch import sigmoid, tanh, relu
 
 
@@ -48,42 +47,52 @@ def weights_init(m):
 
 
 def mean_absolute_percentage_error(y_true, y_pred):
-    y_true, y_pred = np.array(y_true), np.array(y_pred)
-    return np.mean(np.abs(y_true - y_pred) / y_true) * 100
+    return torch.mean(torch.abs(y_true - y_pred) / y_true) * 100
 
 
-def train(model):
-    train_X, val_X, train_y, val_y = load_data('uniform_synthetic_data_Butane_N=5000_D=12 - T2.xlsx')
-    dataset = BLEVEDataset(train_X, train_y)
-    train_loader = DataLoader(dataset=dataset, batch_size=128, shuffle=True, num_workers=4)
+def train(model, dataset, val_X, val_y, batch_size=128, epochs=1000, epoch_show=10):
+    train_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     optimizer = optim.Adam(model.parameters())
     loss_fn = nn.MSELoss()
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # model.to(device)
-    val_X = torch.tensor(val_X, dtype=torch.float32)
-    val_y = torch.tensor(val_y, dtype=torch.float32)
 
-    for epoch in range(1000):
+    for epoch in range(epochs):
         model.train()
         loss_epoch = 0
         for i, data in enumerate(train_loader, 0):
             x, y = data
-            # x.to(device)
-            # y.to(device)
             out = model(x)
             loss_iter = loss_fn(out.squeeze(), y)
             optimizer.zero_grad()
             loss_iter.backward()
             optimizer.step()
-            loss_epoch += loss_iter / 128
-        if epoch % 1 == 0 or epoch == 999:
+            loss_epoch += loss_iter / batch_size
+        if epoch % epoch_show == 0 or epoch == epochs - 1:
             with torch.no_grad():
                 model.eval()
                 pred = model(val_X)
-                mape = loss_fn(val_y, pred.squeeze())
+                mape = mean_absolute_percentage_error(val_y, pred.squeeze())
                 print('Epoch {:03d}: loss={:.6f}, val_mape={:.4f}'.format(epoch, loss_epoch, mape))
 
 
+def load_data(file, device):
+    data = np.load(file)
+    train_X = data['train_X']
+    train_y = data['train_y']
+    val_X = data['val_X']
+    val_y = data['val_y']
+
+    train_X = torch.tensor(train_X, dtype=torch.float32, device=device)
+    train_y = torch.tensor(train_y, dtype=torch.float32, device=device)
+    val_X = torch.tensor(val_X, dtype=torch.float32, device=device)
+    val_y = torch.tensor(val_y, dtype=torch.float32, device=device)
+    dataset = BLEVEDataset(train_X, train_y)
+
+    return dataset, val_X, val_y
+
+
 if __name__ == '__main__':
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    dataset, val_X, val_y = load_data(file='BLEVE_simulated_open.npz', device=device)
     model = MLPNet()
-    train(model)
+    model.to(device)
+    train(model, dataset, val_X, val_y)
