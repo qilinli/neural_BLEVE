@@ -50,11 +50,12 @@ def mean_absolute_percentage_error(y_true, y_pred):
     return torch.mean(torch.abs(y_true - y_pred) / y_true) * 100
 
 
-def train(model, dataset, val_X, val_y, batch_size=128, epochs=1000, epoch_show=10):
+def train(model, dataset, val_X, val_y, batch_size=512, epochs=1000, epoch_show=1):
     train_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     optimizer = optim.Adam(model.parameters())
     loss_fn = nn.MSELoss()
 
+    best_val_mape = 100
     for epoch in range(epochs):
         model.train()
         loss_epoch = 0
@@ -70,8 +71,28 @@ def train(model, dataset, val_X, val_y, batch_size=128, epochs=1000, epoch_show=
             with torch.no_grad():
                 model.eval()
                 pred = model(val_X)
+                loss_val = loss_fn(pred.squeeze(), val_y)
                 mape = mean_absolute_percentage_error(val_y, pred.squeeze())
-                print('Epoch {:03d}: loss={:.6f}, val_mape={:.4f}'.format(epoch, loss_epoch, mape))
+                print('\nEpoch {:03d}: loss_train={:.6f}, loss_val={:.6f}, val_mape={:.4f}'.format(
+                    epoch, loss_epoch, loss_val, mape), end='  ')
+                if mape < best_val_mape:
+                    model_name = 'best_model.pt'
+                    print('Val_mape improved from {:.4f} to {:.4f}, saving model to {}'.format(
+                        best_val_mape, mape, model_name), end=' ')
+                    best_val_mape = mape
+                    torch.save(model.state_dict(), 'models\\' + model_name)
+
+
+def test(model, models_dir, test_X, test_y):
+    import glob
+    models_name = glob.glob(models_dir + '*.pt')
+    models_name.sort()
+    model.load_state_dict(torch.load(models_name[-1]))
+    model.eval()
+    pred = model(test_X)
+    loss = nn.MSELoss()(pred.squeeze(), test_y)
+    mape = mean_absolute_percentage_error(test_y, pred.squeeze())
+    print('\nloss_test: {:.6f}, mape_test:{:.4f}'.format(loss, mape))
 
 
 def load_data(file, device):
@@ -80,19 +101,25 @@ def load_data(file, device):
     train_y = data['train_y']
     val_X = data['val_X']
     val_y = data['val_y']
+    test_X = data['test_X']
+    test_y = data['test_y']
 
     train_X = torch.tensor(train_X, dtype=torch.float32, device=device)
     train_y = torch.tensor(train_y, dtype=torch.float32, device=device)
     val_X = torch.tensor(val_X, dtype=torch.float32, device=device)
     val_y = torch.tensor(val_y, dtype=torch.float32, device=device)
+    test_X = torch.tensor(test_X, dtype=torch.float32, device=device)
+    test_y = torch.tensor(test_y, dtype=torch.float32, device=device)
+
     dataset = BLEVEDataset(train_X, train_y)
 
-    return dataset, val_X, val_y
+    return dataset, val_X, val_y, test_X, test_y
 
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset, val_X, val_y = load_data(file='BLEVE_simulated_open.npz', device=device)
+    dataset, val_X, val_y, test_X, test_y = load_data(file='BLEVE_simulated_open.npz', device=device)
     model = MLPNet()
     model.to(device)
     train(model, dataset, val_X, val_y)
+    test(model, 'models\\', test_X, test_y)

@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 def load_data(file):
     # Load the excel and extract one of the sheets
     xls = pd.ExcelFile(file)
-    df = pd.read_excel(xls, 'Inputs(clean)')
+    df = pd.read_excel(xls, 'Inputs(cleanT3)')
 
     # Shuffle the dataset
     df = df.sample(frac=1)
@@ -47,16 +47,22 @@ def load_data(file):
     data.drop("target", axis=1, inplace=True)
 
     # dataset split, 80% training 20 validation
-    n_train = int(data.shape[0] * 0.8)
+    n_train = int(data.shape[0] * 0.7)
+    n_val = int(data.shape[0] * 0.85)
+
     train_X = data[:n_train].to_numpy()
-    val_X = data[n_train:].to_numpy()
     train_y = target[:n_train].to_numpy()
-    val_y = target[n_train:].to_numpy()
+    val_X = data[n_train:n_val].to_numpy()
+    val_y = target[n_train:n_val].to_numpy()
+    test_X = data[n_val:].to_numpy()
+    test_y = target[n_val:].to_numpy()
 
     train_X = train_X.astype(np.float32)
-    val_X = val_X.astype(np.float32)
     train_y = train_y.astype(np.float32)
+    val_X = val_X.astype(np.float32)
     val_y = val_y.astype(np.float32)
+    test_X = test_X.astype(np.float32)
+    test_y = test_y.astype(np.float32)
 
     # Data preprocessing
     scaler = StandardScaler().fit(train_X)
@@ -64,10 +70,13 @@ def load_data(file):
     # val_X -= scaler.mean_
     train_X = scaler.transform(train_X)
     val_X = scaler.transform(val_X)
+    test_X = scaler.transform(test_X)
 
-    return train_X, val_X, train_y, val_y
+    return train_X, train_y, val_X, val_y, test_X, test_y
 
 
 if __name__ == '__main__':
-    train_X, val_X, train_y, val_y = load_data('uniform_synthetic_data_Butane_N=5000_D=12 - T2.xlsx')
-    np.savez('BLEVE_simulated_open', train_X=train_X, val_X=val_X, train_y=train_y, val_y=val_y)
+    train_X, train_y, val_X, val_y, test_X, test_y = load_data(
+        'uniform_synthetic_data_Butane_N=5000_D=12 - T3.xlsx')
+    np.savez('BLEVE_simulated_open', train_X=train_X, train_y=train_y,
+             val_X=val_X, val_y=val_y, test_X=test_X, test_y=test_y)
