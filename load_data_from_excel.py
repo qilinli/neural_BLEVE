@@ -24,9 +24,7 @@ def load_data(file):
     Y = df.iloc[:, 10:]
     XY = []
     for i in range(Y.shape[0]):
-        cols = [x for x in list(Y.columns[1:].values)
-                if int(x) >= Y['Starting distance (m)'].iloc[i]]    # Extract cols that satisfy "minimal distance"
-        shuffle(cols)
+        cols = [x for x in list(Y.columns[1:].values)]    # Extract cols that satisfy "minimal distance"
 
         for j in range(len(cols)):
             x = X.iloc[i, :].tolist()
@@ -64,19 +62,25 @@ def load_data(file):
     test_X = test_X.astype(np.float32)
     test_y = test_y.astype(np.float32)
 
+    # real data
+    real_data = np.loadtxt('real_test_data.txt', delimiter=',')
+    real_test_X = real_data[:, :-1]
+    real_test_y = real_data[:, -1]
+
     # Data preprocessing
     scaler = StandardScaler().fit(train_X)
-    # train_X -= scaler.mean_
-    # val_X -= scaler.mean_
-    train_X = scaler.transform(train_X)
-    val_X = scaler.transform(val_X)
-    test_X = scaler.transform(test_X)
+    # print(scaler.mean_, scaler.scale_)
+    # train_X = scaler.transform(train_X)
+    # val_X = scaler.transform(val_X)
+    # test_X = scaler.transform(test_X)
+    # real_test_X = scaler.transform(real_test_X)
 
-    return train_X, train_y, val_X, val_y, test_X, test_y
+    return train_X, train_y, val_X, val_y, test_X, test_y, real_test_X, real_test_y
 
 
 if __name__ == '__main__':
-    train_X, train_y, val_X, val_y, test_X, test_y = load_data(
+    train_X, train_y, val_X, val_y, test_X, test_y, real_test_X, real_test_y = load_data(
         'uniform_synthetic_data_Butane_N=5000_D=12 - T3.xlsx')
     np.savez('BLEVE_simulated_open', train_X=train_X, train_y=train_y,
-             val_X=val_X, val_y=val_y, test_X=test_X, test_y=test_y)
+             val_X=val_X, val_y=val_y, test_X=test_X, test_y=test_y,
+             real_test_X=real_test_X, real_test_y=real_test_y)

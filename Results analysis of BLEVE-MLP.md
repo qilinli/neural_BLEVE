@@ -26,13 +26,20 @@
 - Best_mape_val: top 5: n256_b128_p0(11.27%), n256_b1024_p0.1, n256_b256_p0.1, n128_b1024_p0.1, n256_b512_p0.1(12.62%)
 - Mape_test top 5: n256_b512_p0.1(10%), n256_b128_p0(10%), n256_b256_p0, n256_b1024_p0.1, n128_b256_p0(10.4%)
 
+## impractical
 
+- Output contains negative value, might need activation function for the output
+- The distribution of target is lognormal, might need transformation
 
 ## Conclusion
 
 Hidden=2, neurons=256, batchSize=512, p=0.1
 
 SGD is better with mom=0.99
+
+Softplus as the output activation function
+
+
 
 
 
