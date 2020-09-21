@@ -17,9 +17,6 @@ np.random.seed(0)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-# Statistics of training set
-mean = np.array([21.2, 0.491, 1.72, 5.01, 1.66, 1.01, 426, 356, 0.266, 27.5])
-std = np.array([9.01, 0.225, 0.787, 2.77, 0.748, 0.578, 84.5, 38.8, 0.442, 13.3])
 
 class BLEVEDataset(Dataset):
     def __init__(self, x, y):
@@ -83,12 +80,12 @@ def mean_absolute_percentage_error(y_true, y_pred):
 #         super().__init__()
 #
 #     def forward(self, y_true, y_pred):
-#         return torch.mean(torch.abs(y_true - y_pred) / y_true) * 100
+#         return torch.mean(torch.abs(y_true - y_pred) / y_true)
 
 
-def train(model, dataset, val_X, val_y, batch_size=512, epochs=300, epoch_show=1, weight_decay=1e-5, momentum=0.99):
+def train(model, dataset, val_X, val_y, batch_size=512, epochs=400, epoch_show=1, weight_decay=1e-5, momentum=0.99):
     train_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=0)
-    # optimizer = Ranger(model.parameters(), weight_decay=weight_decay)
+    # optimizer = optim.AdamW(model.parameters(), weight_decay=weight_decay)
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=momentum, weight_decay=weight_decay)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                      mode='min',
@@ -97,7 +94,7 @@ def train(model, dataset, val_X, val_y, batch_size=512, epochs=300, epoch_show=1
                                                      threshold=0,
                                                      min_lr=1e-4,
                                                      verbose=True)
-    loss_fn = nn.MSELoss(reduction='mean')
+    loss_fn = nn.MSELoss()
 
     writer = SummaryWriter('runs/Mish/hidden={}_neurons={}_{}_batch={:04d}_bn={}_p={:.1f}_mom={}_l2={}'.format(
         len(model.features)-1, model.features[-1], model.activation_fn_name, batch_size, model.bn, model.p, momentum,
@@ -140,7 +137,7 @@ def train(model, dataset, val_X, val_y, batch_size=512, epochs=300, epoch_show=1
 
 def test(model, models_dir, test_X, test_y, real_test_X, real_test_y):
     model.eval()
-    models_name = glob.glob(models_dir + '*.pt')
+    models_name = glob.glob(models_dir + 'running_best_model.pt')
     models_name.sort()
     model.load_state_dict(torch.load(models_name[-1]), strict=False)
     pred = model(test_X)
@@ -176,6 +173,8 @@ def load_data(file, device):
     test_y = data['test_y']
     real_test_X = data['real_test_X']
     real_test_y = data['real_test_y']
+    mean = data['mean']
+    std = data['std']
 
     # from sklearn.preprocessing import PowerTransformer
     # pt = PowerTransformer(method='box-cox', standardize=True)
@@ -198,7 +197,7 @@ def load_data(file, device):
 
 
 if __name__ == '__main__':
-    for i in range(50):
+    for i in range(1):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         dataset, val_X, val_y, test_X, test_y, real_test_X, real_test_y = load_data(
             file='BLEVE_simulated_open.npz', device=device)
@@ -208,9 +207,9 @@ if __name__ == '__main__':
         bn_list = [0]
         p_list = [0.1]
         batchSize_list = [512]
-        feature_list = [[10, 256, 256]]
-        momentum_list = [0.99]
-        weight_decay_list = [1e-5]
+        feature_list = [[val_X.shape[1], 256, 256, 256]]
+        momentum_list = [0.85]
+        weight_decay_list = [5e-5]
 
         for activation_fn in activation_list:
             for bn in bn_list:

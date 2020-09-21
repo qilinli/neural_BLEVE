@@ -39,7 +39,21 @@ SGD is better with mom=0.99
 
 Softplus as the output activation function
 
+## Best for real data
 
+[10, 256, 256]
+
+p=0.2
+
+batch_size=512
+
+neurons=512
+
+momentum = 0.85
+
+weight-decy= 1e-5
+
+optim = SGD
 
 
 

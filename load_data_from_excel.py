@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 def load_data(file):
     # Load the excel and extract one of the sheets
     xls = pd.ExcelFile(file)
-    df = pd.read_excel(xls, 'Inputs(cleanT3)')
+    df = pd.read_excel(xls, 'Inputs(with new sets)')
 
     # Shuffle the dataset
     df = df.sample(frac=1)
@@ -17,11 +17,11 @@ def load_data(file):
     df.loc[df['Status'] == 'Superheated', 'Status'] = 1
 
     # Col 0 is ID, Col 1-9 are features
-    X = df.iloc[:, 1:10]
+    X = df.iloc[:, 1:11]
     X['Status'] = X['Status'].astype('float32')
 
     # Col 10 is the minimum distance, Cols 11-56 are 46 sensors with varying distance to BLEVE
-    Y = df.iloc[:, 10:]
+    Y = df.iloc[:, 18:]
     XY = []
     for i in range(Y.shape[0]):
         cols = [x for x in list(Y.columns[1:].values)]    # Extract cols that satisfy "minimal distance"
@@ -38,6 +38,7 @@ def load_data(file):
 
     data = pd.DataFrame(XY, columns=columns)
     missing_values = data.isnull().values.any()
+    print(data.columns[data.isnull().any()])
     if missing_values:
         print("===There is Missing value===")
 
@@ -69,18 +70,20 @@ def load_data(file):
 
     # Data preprocessing
     scaler = StandardScaler().fit(train_X)
+    mean_X = scaler.mean_
+    std_X = scaler.scale_
     # print(scaler.mean_, scaler.scale_)
     # train_X = scaler.transform(train_X)
     # val_X = scaler.transform(val_X)
     # test_X = scaler.transform(test_X)
     # real_test_X = scaler.transform(real_test_X)
-
-    return train_X, train_y, val_X, val_y, test_X, test_y, real_test_X, real_test_y
+    print(train_X.shape, mean_X.shape, std_X.shape)
+    return train_X, train_y, val_X, val_y, test_X, test_y, real_test_X, real_test_y, mean_X, std_X
 
 
 if __name__ == '__main__':
-    train_X, train_y, val_X, val_y, test_X, test_y, real_test_X, real_test_y = load_data(
-        'uniform_synthetic_data_Butane_N=5000_D=12 - T3.xlsx')
+    train_X, train_y, val_X, val_y, test_X, test_y, real_test_X, real_test_y, mean, std = load_data(
+        'uniform_synthetic_data_Butane_N=5000_D=12 - T3.4.xlsx')
     np.savez('BLEVE_simulated_open', train_X=train_X, train_y=train_y,
              val_X=val_X, val_y=val_y, test_X=test_X, test_y=test_y,
-             real_test_X=real_test_X, real_test_y=real_test_y)
+             real_test_X=real_test_X, real_test_y=real_test_y, mean=mean, std=std)

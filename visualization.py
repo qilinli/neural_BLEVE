@@ -9,10 +9,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
 
 
-# Statistics of training set
-mean = np.array([21.2, 0.491, 1.72, 5.01, 1.66, 1.01, 426, 356, 0.266, 27.5])
-std = np.array([9.01, 0.225, 0.787, 2.77, 0.748, 0.578, 84.5, 38.8, 0.442, 13.3])
-
 # Name of features
 columns = ['Tank failure Pressure (bar)',
            'Liquid ratio',
@@ -23,16 +19,19 @@ columns = ['Tank failure Pressure (bar)',
            'Vapour temerature (K)',
            'Liquid temerature (K)',
            'Status',
+           'Gas height  (m)',
            'Distance to BLEVE']
-
-model = MLPNet(features=[10, 256, 256], activation_fn='mish')
-models_name = glob.glob('models/*.pt')
-models_name.sort()
-model.load_state_dict(torch.load(models_name[-1]), strict=False)
-model.eval()
 
 # Check the performance
 data = np.load('BLEVE_simulated_open.npz')
+mean = data['mean']
+std = data['std']
+
+model = MLPNet(features=[mean.shape[0], 256, 256], activation_fn='mish')
+models_name = glob.glob('models/running_best_model.pt')
+models_name.sort()
+model.load_state_dict(torch.load(models_name[-1]), strict=False)
+model.eval()
 
 train_X = torch.tensor((data['train_X'] - mean) / std, dtype=torch.float32)
 train_y = torch.tensor(data['train_y'], dtype=torch.float32)
@@ -63,8 +62,13 @@ pred_test = pred_test.squeeze()
 print("MAPE_test: {}".format(mean_absolute_percentage_error(test_y, pred_test)))
 print("R2_test: {}".format(r2_score(data['test_y'], pred_test.detach().numpy())))
 
-real_test_X = torch.tensor((data['real_test_X'] - mean) / std, dtype=torch.float32)
-real_test_y = torch.tensor(data['real_test_y'], dtype=torch.float32)
+# LOAD real data
+real_data = np.loadtxt('real_test_data.txt', delimiter=',')
+real_test_X = real_data[:, :-1]
+real_test_y = real_data[:, -1]
+
+real_test_X = torch.tensor((real_test_X - mean) / std, dtype=torch.float32)
+real_test_y = torch.tensor(real_test_y, dtype=torch.float32)
 real_pred_test = model(real_test_X)
 real_pred_test = real_pred_test.squeeze()
 print("MAPE_real_test: {}".format(mean_absolute_percentage_error(real_test_y, real_pred_test)))
@@ -76,24 +80,27 @@ df_test = df_test.assign(output_simulated=data['test_y'])
 df_test = df_test.assign(output_predicted=pred_test.detach().numpy())
 df_test.to_excel("output.xlsx", sheet_name='simulated_data')
 
-df_test_real = pd.DataFrame(data['real_test_X'], columns=columns)
-df_test_real = df_test_real.assign(output_simulated=data['real_test_y'])
-df_test_real = df_test_real.assign(output_predicted=real_pred_test.detach().numpy())
-df_test_real.to_excel("output1.xlsx", sheet_name='real_data')
+df_test_real = pd.DataFrame(real_data[:, :-1], columns=columns)
+df_test_real = df_test_real.assign(output_simulated=real_data[:, -1])
+real_pred_test = real_pred_test.detach().numpy()
+df_test_real = df_test_real.assign(output_predicted=real_pred_test)
+df_test_real = df_test_real.assign(relative_error=np.abs(real_pred_test -
+                                                         data['real_test_y'])/data['real_test_y'] * 100)
+df_test_real.to_excel("output_real_data.xlsx", sheet_name='real_data')
 
-df_test_small = df_train.loc[df_train['output_simulated'] > 1]
+df_test_small = df_train.loc[df_train['output_simulated'] < 0.1]
 #df_test_small = df_test_small.loc[df_test_small['output_simulated'] < 1]
 
-sns.scatterplot(data=df_test_small,
-                x='output_predicted',
-                y="output_simulated",
-                hue='Status',
-                s=10)
-x_min = df_test_small['output_simulated'].min()
-x_max = df_test_small['output_simulated'].max()
-xx = np.arange(x_min, x_max, 0.001)
-
-sns.lineplot(x=xx, y=xx, color='r')
+# sns.scatterplot(data=df_test_small,
+#                 x='output_predicted',
+#                 y="output_simulated",
+#                 hue='Status',
+#                 s=10)
+# x_min = df_test_small['output_simulated'].min()
+# x_max = df_test_small['output_simulated'].max()
+# xx = np.arange(x_min, x_max, 0.001)
+#
+# sns.lineplot(x=xx, y=xx, color='r')
 
 #sns.lmplot(data=df_test, x="output_predicted", y="output_simulated", hue='Distance to BLEVE')
 plt.show()
