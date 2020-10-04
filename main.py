@@ -163,6 +163,7 @@ def test(model, models_dir, test_X, test_y, real_test_X, real_test_y):
         outfile.write('  ' + str(np.mean(output)))
         outfile.write('\n')
 
+
 def load_data(file, device):
     data = np.load(file)
     train_X = data['train_X']
@@ -200,7 +201,7 @@ if __name__ == '__main__':
     for i in range(1):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         dataset, val_X, val_y, test_X, test_y, real_test_X, real_test_y = load_data(
-            file='BLEVE_simulated_open.npz', device=device)
+            file='BLEVE_Butane_Propane.npz', device=device)
         print(len(val_X))
 
         activation_list = ['mish']

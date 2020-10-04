@@ -23,11 +23,11 @@ columns = ['Tank failure Pressure (bar)',
            'Distance to BLEVE']
 
 # Check the performance
-data = np.load('BLEVE_simulated_open.npz')
+data = np.load('BLEVE_Butane_Propane.npz')
 mean = data['mean']
 std = data['std']
 
-model = MLPNet(features=[mean.shape[0], 256, 256], activation_fn='mish')
+model = MLPNet(features=[mean.shape[0], 256, 256, 256], activation_fn='mish')
 models_name = glob.glob('models/running_best_model.pt')
 models_name.sort()
 model.load_state_dict(torch.load(models_name[-1]), strict=False)
@@ -63,9 +63,8 @@ print("MAPE_test: {}".format(mean_absolute_percentage_error(test_y, pred_test)))
 print("R2_test: {}".format(r2_score(data['test_y'], pred_test.detach().numpy())))
 
 # LOAD real data
-real_data = np.loadtxt('real_test_data.txt', delimiter=',')
-real_test_X = real_data[:, :-1]
-real_test_y = real_data[:, -1]
+real_test_X = data['real_test_X']
+real_test_y = data['real_test_y']
 
 real_test_X = torch.tensor((real_test_X - mean) / std, dtype=torch.float32)
 real_test_y = torch.tensor(real_test_y, dtype=torch.float32)
@@ -75,20 +74,20 @@ print("MAPE_real_test: {}".format(mean_absolute_percentage_error(real_test_y, re
 print("R2_real_test: {}".format(r2_score(data['real_test_y'], real_pred_test.detach().numpy())))
 
 
-df_test = pd.DataFrame(data['test_X'], columns=columns)
-df_test = df_test.assign(output_simulated=data['test_y'])
-df_test = df_test.assign(output_predicted=pred_test.detach().numpy())
-df_test.to_excel("output.xlsx", sheet_name='simulated_data')
-
-df_test_real = pd.DataFrame(real_data[:, :-1], columns=columns)
-df_test_real = df_test_real.assign(output_simulated=real_data[:, -1])
-real_pred_test = real_pred_test.detach().numpy()
-df_test_real = df_test_real.assign(output_predicted=real_pred_test)
-df_test_real = df_test_real.assign(relative_error=np.abs(real_pred_test -
-                                                         data['real_test_y'])/data['real_test_y'] * 100)
-df_test_real.to_excel("output_real_data.xlsx", sheet_name='real_data')
-
-df_test_small = df_train.loc[df_train['output_simulated'] < 0.1]
+# df_test = pd.DataFrame(data['test_X'], columns=columns)
+# df_test = df_test.assign(output_simulated=data['test_y'])
+# df_test = df_test.assign(output_predicted=pred_test.detach().numpy())
+# df_test.to_excel("output.xlsx", sheet_name='simulated_data')
+#
+# df_test_real = pd.DataFrame(real_data[:, :-1], columns=columns)
+# df_test_real = df_test_real.assign(output_simulated=real_data[:, -1])
+# real_pred_test = real_pred_test.detach().numpy()
+# df_test_real = df_test_real.assign(output_predicted=real_pred_test)
+# df_test_real = df_test_real.assign(relative_error=np.abs(real_pred_test -
+#                                                          data['real_test_y'])/data['real_test_y'] * 100)
+# df_test_real.to_excel("output_real_data.xlsx", sheet_name='real_data')
+#
+# df_test_small = df_train.loc[df_train['output_simulated'] < 0.1]
 #df_test_small = df_test_small.loc[df_test_small['output_simulated'] < 1]
 
 # sns.scatterplot(data=df_test_small,
@@ -103,4 +102,4 @@ df_test_small = df_train.loc[df_train['output_simulated'] < 0.1]
 # sns.lineplot(x=xx, y=xx, color='r')
 
 #sns.lmplot(data=df_test, x="output_predicted", y="output_simulated", hue='Distance to BLEVE')
-plt.show()
+# plt.show()

@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 def load_data(file):
     # Load the excel and extract one of the sheets
     xls = pd.ExcelFile(file)
-    df = pd.read_excel(xls, 'Inputs(with new sets)')
+    df = pd.read_excel(xls, 'simulated')
 
     # Shuffle the dataset
     df = df.sample(frac=1)
@@ -16,20 +16,20 @@ def load_data(file):
     df.loc[df['Status'] == 'Subcooled', 'Status'] = 0
     df.loc[df['Status'] == 'Superheated', 'Status'] = 1
 
-    # Col 0 is ID, Col 1-9 are features
+    # Col 0 is ID, Col 1-10 are features
     X = df.iloc[:, 1:11]
     X['Status'] = X['Status'].astype('float32')
 
-    # Col 10 is the minimum distance, Cols 11-56 are 46 sensors with varying distance to BLEVE
-    Y = df.iloc[:, 18:]
+    # Cols 11-56 are 46 sensors with varying distance to BLEVE
+    Y = df.iloc[:, 11:]
     XY = []
     for i in range(Y.shape[0]):
-        cols = [x for x in list(Y.columns[1:].values)]    # Extract cols that satisfy "minimal distance"
+        cols = [x for x in list(Y.columns.values)]
 
         for j in range(len(cols)):
             x = X.iloc[i, :].tolist()
             x.append(int(cols[j]))  # add label of col as feature "Distance from BLEVE"
-            x.append(Y.iloc[i, cols[j] - 4])  # add target values
+            x.append(Y.iloc[i, cols[j] - 5])  # add target values
             XY.append(x)
 
     columns = list(X.columns.values)
@@ -64,7 +64,9 @@ def load_data(file):
     test_y = test_y.astype(np.float32)
 
     # real data
-    real_data = np.loadtxt('real_test_data.txt', delimiter=',')
+    df = pd.read_excel(xls, 'real')
+    df = df.iloc[:, 1:]     # The first col is ID
+    real_data = df.to_numpy()
     real_test_X = real_data[:, :-1]
     real_test_y = real_data[:, -1]
 
@@ -72,18 +74,20 @@ def load_data(file):
     scaler = StandardScaler().fit(train_X)
     mean_X = scaler.mean_
     std_X = scaler.scale_
-    # print(scaler.mean_, scaler.scale_)
+
+    # Normalization moved to main.py
     # train_X = scaler.transform(train_X)
     # val_X = scaler.transform(val_X)
     # test_X = scaler.transform(test_X)
     # real_test_X = scaler.transform(real_test_X)
-    print(train_X.shape, mean_X.shape, std_X.shape)
+
+    print(train_X.shape, val_X.shape, test_X.shape, real_test_X.shape)
     return train_X, train_y, val_X, val_y, test_X, test_y, real_test_X, real_test_y, mean_X, std_X
 
 
 if __name__ == '__main__':
     train_X, train_y, val_X, val_y, test_X, test_y, real_test_X, real_test_y, mean, std = load_data(
-        'uniform_synthetic_data_Butane_N=5000_D=12 - T3.4.xlsx')
-    np.savez('BLEVE_simulated_open', train_X=train_X, train_y=train_y,
+        'data_simulated_real_Butane_Propane.xlsx')
+    np.savez('BLEVE_Butane_Propane', train_X=train_X, train_y=train_y,
              val_X=val_X, val_y=val_y, test_X=test_X, test_y=test_y,
              real_test_X=real_test_X, real_test_y=real_test_y, mean=mean, std=std)
