@@ -45,7 +45,7 @@ def load_data(file):
     target = data["target"]
     data.drop("target", axis=1, inplace=True)
 
-    # dataset split, 80% training 20 validation
+    # dataset split, 70% training 15 validation 15 testing
     n_train = int(data.shape[0] * 0.7)
     n_val = int(data.shape[0] * 0.85)
 

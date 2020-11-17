@@ -75,34 +75,34 @@ def mean_absolute_percentage_error(y_true, y_pred):
     return torch.mean(torch.abs(y_true - y_pred) / torch.abs(y_true)) * 100
 
 
-# class MAPELoss(nn.Module):
-#     def __init__(self):
-#         super().__init__()
-#
-#     def forward(self, y_true, y_pred):
-#         return torch.mean(torch.abs(y_true - y_pred) / y_true)
+def get_lr(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']
 
 
-def train(model, dataset, val_X, val_y, batch_size=512, epochs=400, epoch_show=1, weight_decay=1e-5, momentum=0.99):
+def train(model, dataset, val_X, val_y, batch_size=512, epochs=500, epoch_show=1, weight_decay=1e-5, momentum=0.9):
     train_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=0)
-    # optimizer = optim.AdamW(model.parameters(), weight_decay=weight_decay)
+    # optimizer = optim.Adam(model.parameters(), weight_decay=weight_decay)
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=momentum, weight_decay=weight_decay)
+    min_lr = 1e-4
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                      mode='min',
                                                      factor=0.1,
                                                      patience=50,
                                                      threshold=0,
-                                                     min_lr=1e-4,
+                                                     min_lr=min_lr,
                                                      verbose=True)
-    loss_fn = nn.MSELoss()
+    loss_fn = nn.MSELoss(reduction='mean')
 
-    writer = SummaryWriter('runs/Mish/hidden={}_neurons={}_{}_batch={:04d}_bn={}_p={:.1f}_mom={}_l2={}'.format(
+    writer = SummaryWriter('runs/batchSize/linear_hidden={}_neurons={}_{}_batch={:04d}_bn={}_p={:.1f}_mom={}_l2={}'.format(
         len(model.features)-1, model.features[-1], model.activation_fn_name, batch_size, model.bn, model.p, momentum,
         weight_decay
     ))
 
     best_val_mape = 100
     for epoch in range(epochs):
+        # if get_lr(optimizer) < 2 * min_lr:
+        #     break
         model.train()
         loss_epoch = 0
         for i, data in enumerate(train_loader, 0):
@@ -121,14 +121,14 @@ def train(model, dataset, val_X, val_y, batch_size=512, epochs=400, epoch_show=1
                 mape = mean_absolute_percentage_error(val_y, pred.squeeze())
                 scheduler.step(best_val_mape)
                 print('\nEpoch {:03d}: loss_train={:.6f}, loss_val={:.6f}, val_mape={:.4f}, '
-                      'best_val_mape={:.4f}'.format(epoch, loss_epoch, loss_val, mape, best_val_mape), end='  ')
+                      'best_val_mape={:.4f}'.format(epoch, loss_epoch/(i+1), loss_val, mape, best_val_mape), end='  ')
                 if mape < best_val_mape:
                     model_name = 'running_best_model.pt'
                     print('Val_mape improved from {:.4f} to {:.4f}, saving model to {}'.format(
                         best_val_mape, mape, model_name), end=' ')
                     best_val_mape = mape
                     torch.save(model.state_dict(), 'models/' + model_name)
-        writer.add_scalar("loss/train", loss_epoch, epoch)
+        writer.add_scalar("loss/train", loss_epoch/(i+1), epoch)
         writer.add_scalar("loss/val", loss_val, epoch)
         writer.add_scalar("mape/val", mape, epoch)
     writer.add_scalar("mape/best_val", best_val_mape)
@@ -208,9 +208,13 @@ if __name__ == '__main__':
         bn_list = [0]
         p_list = [0.1]
         batchSize_list = [512]
-        feature_list = [[val_X.shape[1], 256, 256, 256]]
-        momentum_list = [0.85]
-        weight_decay_list = [5e-5]
+        # feature_list = [[val_X.shape[1], 64], [val_X.shape[1], 128], [val_X.shape[1], 256], [val_X.shape[1], 512],
+        #                 [val_X.shape[1], 64, 64], [val_X.shape[1], 128, 128], [val_X.shape[1], 256, 256], [val_X.shape[1], 512, 512]
+        #                 [val_X.shape[1], 64, 64, 64], [val_X.shape[1], 128, 128, 128], [val_X.shape[1], 256, 256, 256], [val_X.shape[1], 512, 512, 512],
+        #                 [val_X.shape[1], 64, 64, 64, 64], [val_X.shape[1], 128, 128, 128, 128], [val_X.shape[1], 256, 256, 256, 256], [val_X.shape[1], 512, 512, 512, 512]]
+        feature_list =[[val_X.shape[1], 256, 256, 256]]
+        momentum_list = [0.9]
+        weight_decay_list = [1e-5]
 
         for activation_fn in activation_list:
             for bn in bn_list:
