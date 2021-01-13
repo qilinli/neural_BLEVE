@@ -64,8 +64,8 @@ def load_data(file):
     test_y = test_y.astype(np.float32)
 
     # real data
-    df = pd.read_excel(xls, 'real')
-    df = df.iloc[:, 1:]     # The first col is ID
+    df = pd.read_excel(xls, 'real_noVal')
+    df = df.iloc[:, 2:]     # The first col is ID, second is fluid
     real_data = df.to_numpy()
     real_test_X = real_data[:, :-1]
     real_test_y = real_data[:, -1]
@@ -87,7 +87,7 @@ def load_data(file):
 
 if __name__ == '__main__':
     train_X, train_y, val_X, val_y, test_X, test_y, real_test_X, real_test_y, mean, std = load_data(
-        'data_simulated_real_Butane_Propane.xlsx')
+        'data_simulated_real_Butane_Propane_T4.xlsx')
     np.savez('BLEVE_Butane_Propane', train_X=train_X, train_y=train_y,
              val_X=val_X, val_y=val_y, test_X=test_X, test_y=test_y,
              real_test_X=real_test_X, real_test_y=real_test_y, mean=mean, std=std)

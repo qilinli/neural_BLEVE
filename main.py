@@ -131,6 +131,7 @@ def train(model, dataset, val_X, val_y, batch_size=512, epochs=500, epoch_show=1
         writer.add_scalar("loss/train", loss_epoch/(i+1), epoch)
         writer.add_scalar("loss/val", loss_val, epoch)
         writer.add_scalar("mape/val", mape, epoch)
+    torch.save(model.state_dict(), 'models/final_model.pt')
     writer.add_scalar("mape/best_val", best_val_mape)
     return writer
 
@@ -206,7 +207,7 @@ if __name__ == '__main__':
 
         activation_list = ['mish']
         bn_list = [0]
-        p_list = [0.1]
+        p_list = [0]
         batchSize_list = [512]
         # feature_list = [[val_X.shape[1], 64], [val_X.shape[1], 128], [val_X.shape[1], 256], [val_X.shape[1], 512],
         #                 [val_X.shape[1], 64, 64], [val_X.shape[1], 128, 128], [val_X.shape[1], 256, 256], [val_X.shape[1], 512, 512]
@@ -214,7 +215,7 @@ if __name__ == '__main__':
         #                 [val_X.shape[1], 64, 64, 64, 64], [val_X.shape[1], 128, 128, 128, 128], [val_X.shape[1], 256, 256, 256, 256], [val_X.shape[1], 512, 512, 512, 512]]
         feature_list =[[val_X.shape[1], 256, 256, 256]]
         momentum_list = [0.9]
-        weight_decay_list = [1e-5]
+        weight_decay_list = [1e-6]
 
         for activation_fn in activation_list:
             for bn in bn_list:
