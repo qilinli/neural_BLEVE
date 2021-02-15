@@ -215,7 +215,7 @@ if __name__ == '__main__':
         #                 [val_X.shape[1], 64, 64, 64, 64], [val_X.shape[1], 128, 128, 128, 128], [val_X.shape[1], 256, 256, 256, 256], [val_X.shape[1], 512, 512, 512, 512]]
         feature_list =[[val_X.shape[1], 256, 256, 256]]
         momentum_list = [0.9]
-        weight_decay_list = [1e-6]
+        weight_decay_list = [1e-5]
 
         for activation_fn in activation_list:
             for bn in bn_list:
