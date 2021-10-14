@@ -33,16 +33,7 @@ class BLEVEDataset(Dataset):
 class MLPNet(nn.Module):
     def __init__(self, features=[10, 256, 256], bn=False, activation_fn='mish', p=0):
         super().__init__()
-        self.net = nn.Sequential()
-        if activation_fn == 'sigmoid':
-            self.activation_fn = nn.Sigmoid()
-        elif activation_fn == 'tanh':
-            self.activation_fn = nn.Tanh()
-        elif activation_fn == 'mish':
-            self.activation_fn = Mish()
-        else:
-            self.activation_fn = nn.ReLU(inplace=True)
-
+        self.activation_fn = Mish()
         self.features = features
         self.bn = bn
         self.activation_fn_name = activation_fn
@@ -50,8 +41,6 @@ class MLPNet(nn.Module):
 
         for layer in range(1, len(features)):
             self.net.add_module('fc%d' % layer, nn.Linear(features[layer - 1], features[layer]))
-            if bn:
-                self.net.add_module('bn%d' % layer, nn.BatchNorm1d(features[layer]))
             self.net.add_module('sig%d' % layer, self.activation_fn)
             if p > 0:
                 self.net.add_module('dp%d' % layer, nn.Dropout(p))
@@ -61,9 +50,6 @@ class MLPNet(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 m.weight.data = nn.init.xavier_normal_(m.weight.data)
-                m.bias.data = torch.nn.init.zeros_(m.bias.data)
-            if isinstance(m, nn.BatchNorm1d):
-                m.weight.data = nn.init.normal_(m.weight.data, mean=1, std=0.02)
                 m.bias.data = torch.nn.init.zeros_(m.bias.data)
 
     def forward(self, x):
@@ -94,6 +80,7 @@ def train(model, dataset, val_X, val_y, batch_size=512, epochs=500, epoch_show=1
                                                      verbose=True)
     loss_fn = nn.MSELoss(reduction='mean')
 
+<<<<<<< HEAD
     writer = SummaryWriter('runs/batchSize/linear_hidden={}_neurons={}_{}_batch={:04d}_bn={}_p={:.1f}_mom={}_l2={}'.format(
         len(model.features)-1, model.features[-1], model.activation_fn_name, batch_size, model.bn, model.p, momentum,
         weight_decay
@@ -145,7 +132,6 @@ def test(model, models_dir, test_X, test_y, real_test_X, real_test_y):
     loss = nn.MSELoss()(pred.squeeze(), test_y)
     mape = mean_absolute_percentage_error(test_y, pred.squeeze())
     print('\nloss_test: {:.6f}, mape_test:{:.4f}'.format(loss, mape))
-    # writer.add_scalar('mape/test', mape)
 
     pred = model(real_test_X)
     print(pred.squeeze())
@@ -177,13 +163,6 @@ def load_data(file, device):
     real_test_y = data['real_test_y']
     mean = data['mean']
     std = data['std']
-
-    # from sklearn.preprocessing import PowerTransformer
-    # pt = PowerTransformer(method='box-cox', standardize=True)
-    # train_y = pt.fit_transform(train_y.reshape(-1,1)).squeeze()
-    # val_y = pt.transform(val_y.reshape(-1,1)).squeeze()
-    # test_y = pt.transform(test_y.reshape(-1,1)).squeeze()
-    # real_test_y = pt.transform(real_test_y.reshape(-1,1)).squeeze()
 
     train_X, val_X, test_X, real_test_X = map(lambda x: (x - mean) / std,
                                               [train_X, val_X, test_X, real_test_X])
@@ -229,6 +208,6 @@ if __name__ == '__main__':
                                     ))
                                     model = MLPNet(features=features, activation_fn=activation_fn, bn=bn, p=p)
                                     model.to(device)
-                                    writer = train(model, dataset, val_X, val_y, batch_size=batch_size,
-                                                   momentum=momentum, weight_decay=weight_decay)
+                                    train(model, dataset, val_X, val_y, batch_size=batch_size,
+                                               momentum=momentum, weight_decay=weight_decay)
                                     test(model, 'models/', test_X, test_y, real_test_X, real_test_y)
